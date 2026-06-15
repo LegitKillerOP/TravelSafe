@@ -59,6 +59,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return defaultInitialState;
   });
 
+  // Local-only state tracking for response nodes to override active UI visibility without altering PubNub feeds
+  const [localMutedIncident, setLocalMutedIncident] = useState(false);
+
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
@@ -74,6 +77,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (envelope.publisher === pubnubClient.getUserId()) return;
 
         if (eventName === 'SOS_BROADCAST_START') {
+          setLocalMutedIncident(false); // Reset mute flag whenever a fresh network breach/incident occurs
           setState((prev) => ({
             ...prev,
             safetyTimer: 1000,
@@ -85,6 +89,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (eventName === 'SOS_BROADCAST_CLEAR') {
+          setLocalMutedIncident(false);
           setState((prev) => ({
             ...prev,
             safetyTimer: null,
@@ -170,17 +175,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const triggerSOS = () => {
     const currentLoc = stateRef.current.userLocation;
     const currentName = stateRef.current.currentUser?.userName || 'Civilian Node';
-
-    // Set local state instantly for the sender window
     setState((prev) => ({ ...prev, safetyTimer: 1000, safetyDuration: '00:00:01', meshStatus: 'Scanning' }));
-    
-    // Broadcast outward instantly to all listening phones on the internet
     sendNetworkMeshEvent('SOS_BROADCAST_START', { location: currentLoc, userName: currentName });
   };
 
   const resetSOS = () => {
     setState((prev) => ({ ...prev, safetyTimer: null, safetyDuration: '00:00:00', meshStatus: 'Active', responseLatency: 0 }));
     sendNetworkMeshEvent('SOS_BROADCAST_CLEAR', {});
+  };
+
+  // Operational Node Actions (Mutes locally on current supervisor console layout only)
+  const interceptSOS = (targetUid?: string) => {
+    console.log(`[Mesh Event] Local node intercepting routing target frame: ${targetUid}`);
+  };
+
+  const clearSOSIncident = (targetUid?: string) => {
+    console.log(`[Mesh Event] Locally dismissing incident display frame for target: ${targetUid}`);
+    setLocalMutedIncident(true);
   };
 
   const addEvidence = (hash: string, locationStr: string) => {
@@ -190,12 +201,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       location: locationStr,
       hash: hash
     };
-    setState((prev) => ({
-      ...prev,
-      latestHash: hash,
-      evidenceLogs: [freshLog, ...prev.evidenceLogs]
-    }));
-
+    setState((prev) => ({ ...prev, latestHash: hash, evidenceLogs: [freshLog, ...prev.evidenceLogs] }));
     sendNetworkMeshEvent('EVIDENCE_DISPATCH', { hash, log: freshLog });
   };
 
@@ -204,7 +210,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AppContext.Provider value={{ state, login, logout, triggerSOS, resetSOS, addEvidence, updateLocation }}>
+    <AppContext.Provider 
+      value={{ 
+        state, 
+        localMutedIncident,
+        login, 
+        logout, 
+        triggerSOS, 
+        resetSOS, 
+        interceptSOS, 
+        clearSOSIncident, 
+        addEvidence, 
+        updateLocation 
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

@@ -24,10 +24,13 @@ export type AppState = {
 
 export type AppContextType = {
   state: AppState;
+  localMutedIncident: boolean; // Tracks if an active distress incident is locally minimized/hidden
   login: (profile: Omit<UserProfile, 'uid'>) => void;
   logout: () => void;
   triggerSOS: () => void;
   resetSOS: () => void;
+  interceptSOS: (targetUid?: string) => void; // Dispatches response vector on local machine
+  clearSOSIncident: (targetUid?: string) => void; // Clears the notification frame locally for the operator
   addEvidence: (hash: string, locationStr: string) => void;
   updateLocation: (lat: number, lng: number) => void;
 };

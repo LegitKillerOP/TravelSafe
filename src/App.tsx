@@ -10,6 +10,7 @@ import { Shield, LogOut } from 'lucide-react';
 
 function AppContent() {
   const { state, logout } = useAppState();
+  const isSOSActive = state.safetyTimer !== null;
 
   if (!state.isAuthenticated) {
     return (
@@ -22,10 +23,16 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between antialiased selection:bg-cyan-500/20">
       {/* Dynamic Session Connected Header */}
-      <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+      <header className={`border-b backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between transition-colors duration-500 ${
+        isSOSActive && state.currentUser?.role === 'user' 
+          ? 'bg-rose-950/40 border-rose-900' 
+          : 'bg-slate-950/80 border-slate-900'
+      }`}>
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center">
-            <Shield className="h-4 w-4 text-slate-950 stroke-[2.5]" />
+          <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-all ${
+            isSOSActive ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/20' : 'bg-gradient-to-tr from-emerald-500 to-cyan-500'
+          }`}>
+            <Shield className={`h-4 w-4 stroke-[2.5] ${isSOSActive ? 'text-white' : 'text-slate-950'}`} />
           </div>
           <div>
             <span className="text-xs font-mono font-bold text-slate-200">
@@ -41,7 +48,7 @@ function AppContent() {
           </span>
           <button 
             onClick={logout}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
             title="Terminate Session Node"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -50,7 +57,9 @@ function AppContent() {
       </header>
 
       {/* Role-Restricted Viewport Mapping Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex items-center justify-center">
+      <main className={`flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex items-center justify-center transition-all duration-500 ${
+        isSOSActive && state.currentUser?.role === 'user' ? 'pt-24' : ''
+      }`}>
         <div className="w-full">
           {state.currentUser?.role === 'user' && <UserMobileView />}
           {state.currentUser?.role === 'guardian' && <GuardianMeshHub />}
@@ -58,6 +67,7 @@ function AppContent() {
         </div>
       </main>
 
+      {/* Global Contextual SOS Alert Broadcast Stream Layer */}
       <SOSOverlay />
 
       <footer className="border-t border-slate-900 py-3 text-center text-[10px] text-slate-600 font-mono tracking-wider">
