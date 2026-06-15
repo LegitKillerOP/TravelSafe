@@ -4,8 +4,22 @@ import { AppContext } from './Context';
 import type { AppState, UserProfile } from './Context';
 
 const DEFAULT_RED_ZONES = [
-  { lat: 26.8520, lng: 80.9490, radius: 180 },
-  { lat: 26.8410, lng: 80.9350, radius: 240 }
+  { id: 'zone-1', name: 'Hazratganj Central Corridor', lat: 26.8520, lng: 80.9490, radius: 180, riskLevel: 'Medium' },
+  { id: 'zone-2', name: 'Charbagh Station Transit Hub', lat: 26.8312, lng: 80.9205, radius: 350, riskLevel: 'High' },
+  { id: 'zone-3', name: 'Aminabad Market Bottleneck', lat: 26.8410, lng: 80.9350, radius: 240, riskLevel: 'High' },
+  { id: 'zone-4', name: 'Gomti Nagar Extension Underpass', lat: 26.8485, lng: 80.9982, radius: 210, riskLevel: 'Low' },
+  { id: 'zone-5', name: 'Alambagh High-Density Intersect', lat: 26.8028, lng: 80.9034, radius: 280, riskLevel: 'Medium' },
+  { id: 'zone-6', name: 'Chowk Heritage Old City Corridor', lat: 26.8672, lng: 80.9068, radius: 320, riskLevel: 'High' },
+  { id: 'zone-7', name: 'Polytechnic Chauraha Commuter Pivot', lat: 26.8732, lng: 80.9884, radius: 300, riskLevel: 'High' },
+  { id: 'zone-8', name: 'Munshi Pulia Intersection Overpass', lat: 26.8921, lng: 80.9915, radius: 220, riskLevel: 'Medium' },
+  { id: 'zone-9', name: 'Lulu Mall Transit Fringe Loop', lat: 26.7725, lng: 81.0118, radius: 400, riskLevel: 'Low' },
+  { id: 'zone-10', name: 'Kapoorthala Commercial Sector Hub', lat: 26.8794, lng: 80.9439, radius: 190, riskLevel: 'Medium' },
+  { id: 'zone-11', name: 'Engineering College Student Zone', lat: 26.9142, lng: 80.9421, radius: 260, riskLevel: 'High' },
+  { id: 'zone-12', name: 'Jankipuram Vistar Isolation Link', lat: 26.9310, lng: 80.9592, radius: 310, riskLevel: 'Low' },
+  { id: 'zone-13', name: 'Tedhi Pulia High-Capacity Roundabout', lat: 26.9065, lng: 80.9578, radius: 270, riskLevel: 'Medium' },
+  { id: 'zone-14', name: 'Bhootnath Market Arterial Narrow', lat: 26.8681, lng: 80.9818, radius: 170, riskLevel: 'High' },
+  { id: 'zone-15', name: 'Ashiyana Power House Dense Perimeter', lat: 26.7914, lng: 80.9167, radius: 230, riskLevel: 'Medium' },
+  { id: 'zone-16', name: 'IT Chauraha Metro Interchange', lat: 26.8649, lng: 80.9496, radius: 200, riskLevel: 'High' }
 ];
 
 const defaultInitialState: AppState = {
