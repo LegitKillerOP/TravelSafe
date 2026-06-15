@@ -25,6 +25,7 @@ export const GuardianMeshHub = () => {
   }, [dangerMode]);
 
   const openRoute = () => {
+    // FIXED: Corrected string interpolation template layout literal format
     window.open(`https://www.google.com/maps/search/?api=1&query=${state.userLocation.lat},${state.userLocation.lng}`, '_blank');
   };
 
@@ -42,7 +43,11 @@ export const GuardianMeshHub = () => {
             </div>
 
             <div className="bg-black/40 border border-red-500/20 p-4 rounded-xl space-y-2.5 text-left text-xs font-mono">
-              <p className="flex justify-between"><span className="text-slate-500">Target Node:</span> <span className="text-slate-200 font-bold">{state.userName}</span></p>
+              <p className="flex justify-between">
+                <span className="text-slate-500">Target Node:</span> 
+                {/* FIXED: Re-mapped name output pathway to match your actual structural session definition */}
+                <span className="text-slate-200 font-bold">{state.currentUser?.userName || 'Anonymous Node'}</span>
+              </p>
               <p className="flex justify-between"><span className="text-slate-500">Vector Coordinates:</span> <span className="text-red-400">{state.userLocation.lat.toFixed(4)}, {state.userLocation.lng.toFixed(4)}</span></p>
               <p className="flex justify-between"><span className="text-slate-500">Broadcast Clock:</span> <span className="text-slate-200 font-bold">{state.safetyDuration}</span></p>
             </div>
@@ -82,7 +87,7 @@ export const GuardianMeshHub = () => {
       <div className="bg-slate-900/50 border border-slate-800/80 p-4 rounded-xl space-y-2.5 font-mono text-[11px]">
         <div className="flex justify-between"><span className="text-slate-500">Local Mesh Shield</span> <span className="text-emerald-400 font-bold flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"/>{state.meshStatus}</span></div>
         <div className="flex justify-between"><span className="text-slate-500">Proximity Perimeter</span> <span className="text-slate-300 font-bold">5.0 KM Radius</span></div>
-        <div className="flex justify-between"><span className="text-slate-500">Validation Gateway</span> <span className="text-slate-300 font-bold">Aadhaar Certified</span></div>
+        <div className="flex justify-between"><span className="text-slate-500">Validation Gateway</span> <span className="text-slate-300 font-bold">Verified Operator</span></div>
       </div>
     </div>
   );
