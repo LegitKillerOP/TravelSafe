@@ -1,12 +1,14 @@
-import React from 'react';
+import { lazy, Suspense } from 'react';
 import { AppProvider } from './context/AppProvider';
 import { useAppState } from './context/Context';
-import { UserMobileView } from './components/UserMobileView';
-import { GuardianMeshHub } from './components/GuardianMeshHub';
-import { PoliceVaultDashboard } from './components/PoliceVaultDashboard';
 import { LoginView } from './components/LoginView';
 import { SOSOverlay } from './components/SOSOverlay';
 import { Shield, LogOut } from 'lucide-react';
+
+// Code-splitting dashboard modules to optimize production build chunking
+const UserMobileView = lazy(() => import('./components/UserMobileView').then(m => ({ default: m.UserMobileView })));
+const GuardianMeshHub = lazy(() => import('./components/GuardianMeshHub').then(m => ({ default: m.GuardianMeshHub })));
+const PoliceVaultDashboard = lazy(() => import('./components/PoliceVaultDashboard').then(m => ({ default: m.PoliceVaultDashboard })));
 
 function AppContent() {
   const { state, logout } = useAppState();
@@ -61,9 +63,17 @@ function AppContent() {
         isSOSActive && state.currentUser?.role === 'user' ? 'pt-24' : ''
       }`}>
         <div className="w-full">
-          {state.currentUser?.role === 'user' && <UserMobileView />}
-          {state.currentUser?.role === 'guardian' && <GuardianMeshHub />}
-          {state.currentUser?.role === 'police' && <PoliceVaultDashboard />}
+          {/* Suspense wrapper handles async loading of role-based sub-bundles seamlessly */}
+          <Suspense fallback={
+            <div className="flex flex-col items-center justify-center gap-3 py-12 font-mono text-xs text-slate-500">
+              <div className="h-4 w-4 rounded-full border-2 border-slate-800 border-t-emerald-500 animate-spin" />
+              <span>Syncing Localized Node Vectors...</span>
+            </div>
+          }>
+            {state.currentUser?.role === 'user' && <UserMobileView />}
+            {state.currentUser?.role === 'guardian' && <GuardianMeshHub />}
+            {state.currentUser?.role === 'police' && <PoliceVaultDashboard />}
+          </Suspense>
         </div>
       </main>
 
