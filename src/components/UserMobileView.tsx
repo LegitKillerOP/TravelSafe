@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../context/Context';
 import { useSpeechListener } from './SpeechListeners';
-import { Zap, EyeOff, Radio, Activity, Navigation, AlertTriangle, Move, ShieldAlert, Crosshair, Users, HardDrive, Maximize2, Minimize2 } from 'lucide-react';
+import { Zap, EyeOff, Radio, Activity, Navigation, AlertTriangle, Move, ShieldAlert, Crosshair, Users, HardDrive } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -20,7 +20,6 @@ export const UserMobileView = () => {
   const [recording, setRecording] = useState(false);
   const [blackoutActive, setBlackoutActive] = useState(false);
   const [selectedZone, setSelectedZone] = useState<ThreatZone | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   
   const [liveCoords, setLiveCoords] = useState<{ lat: number; lng: number }>({
     lat: state.userLocation?.lat || 26.8467,
@@ -36,7 +35,7 @@ export const UserMobileView = () => {
   useSpeechListener(voiceActive);
 
   // =========================================================================
-  // HOOK 1: PRIMARY CANVAS INITIALIZATION
+  // HOOK 1: MAP INITIALIZATION
   // =========================================================================
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -59,23 +58,13 @@ export const UserMobileView = () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        markerRef.current = null;
       }
     };
   }, []);
 
   // =========================================================================
-  // HOOK 2: FULLSCREEN GEOMETRY RECALIBRATION
-  // =========================================================================
-  useEffect(() => {
-    if (mapRef.current) {
-      setTimeout(() => {
-        mapRef.current?.invalidateSize({ animate: true });
-      }, 300); // Matches Tailwind layout transitions
-    }
-  }, [isFullscreen]);
-
-  // =========================================================================
-  // HOOK 3: TELEMETRY MARKER SYNCHRONIZATION
+  // HOOK 2: TELEMETRY MARKER SYNCHRONIZATION
   // =========================================================================
   useEffect(() => {
     if (!mapRef.current) return;
@@ -97,12 +86,11 @@ export const UserMobileView = () => {
         iconAnchor: [24, 24]
       });
       markerRef.current = L.marker([liveCoords.lat, liveCoords.lng], { icon: beaconIcon }).addTo(map);
-      map.setView([liveCoords.lat, liveCoords.lng], map.getZoom());
     }
   }, [liveCoords.lat, liveCoords.lng]);
 
   // =========================================================================
-  // HOOK 4: GEOFENCED VECTOR BOUNDARIES LAYER
+  // HOOK 3: GEOFENCED VECTOR BOUNDARIES LAYER
   // =========================================================================
   useEffect(() => {
     if (!mapRef.current) return;
@@ -148,12 +136,14 @@ export const UserMobileView = () => {
     }
   }, [state.redZones]);
 
+  // Sync state context position modifications
   useEffect(() => {
     if (state.userLocation) {
       setLiveCoords({ lat: state.userLocation.lat, lng: state.userLocation.lng });
     }
   }, [state.userLocation]);
 
+  // Hardware Geolocation Watch Stream Interface
   useEffect(() => {
     if (!('geolocation' in navigator)) return;
     setIsTracking(true);
@@ -231,10 +221,8 @@ export const UserMobileView = () => {
 
       <div className="flex flex-col h-full flex-grow">
         
-        {/* Dynamic Mobile Header - Collapsed during Fullscreen Map Focus */}
-        <div className={`transition-all duration-300 origin-top overflow-hidden ${
-          isFullscreen ? 'h-0 opacity-0 mb-0 scale-y-0' : 'h-auto opacity-100 mb-3'
-        }`}>
+        {/* Dynamic Mobile Header */}
+        <div className="h-auto opacity-100 mb-3">
           <div className="flex items-center justify-between px-1">
             <div>
               <h3 className="text-[10px] font-mono tracking-widest text-slate-500 uppercase">System Node</h3>
@@ -251,10 +239,8 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* System Telemetry Core Grid - Collapsed during Fullscreen Map Focus */}
-        <div className={`grid grid-cols-3 gap-2 transition-all duration-300 origin-top overflow-hidden ${
-          isFullscreen ? 'h-0 opacity-0 mb-0 scale-y-0' : 'h-auto opacity-100 mb-3'
-        }`}>
+        {/* System Telemetry Core Grid */}
+        <div className="grid grid-cols-3 gap-2 h-auto opacity-100 mb-3">
           <div className="bg-slate-900/40 border border-slate-900 p-2 rounded-xl text-center backdrop-blur-sm">
             <span className="text-[9px] text-slate-500 block font-medium uppercase tracking-wider">Latency</span>
             <span className="text-xs font-mono font-bold text-emerald-400">{state.responseLatency || '12'}ms</span>
@@ -271,14 +257,12 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* ADAPTIVE INTERACTIVE VIEWPORT CANVAS */}
-        <div className={`transition-all duration-500 rounded-2xl border bg-slate-950 transform-gpu will-change-transform z-10 relative ${
-          isFullscreen 
-            ? 'absolute inset-0 m-0 rounded-none border-none h-full w-full z-40' 
-            : 'h-[410px] w-full mb-4'
-        } ${isSOSActive && !isFullscreen ? 'border-red-600/60 shadow-lg shadow-red-950/20' : 'border-slate-800'}`}>
+        {/* INTERACTIVE VIEWPORT CANVAS */}
+        <div className={`transition-all duration-300 rounded-2xl border bg-slate-950 transform-gpu will-change-transform z-10 relative h-[410px] w-full mb-4 ${
+          isSOSActive ? 'border-red-600/60 shadow-lg shadow-red-950/20' : 'border-slate-800'
+        }`}>
           
-          <div ref={mapContainerRef} className="w-full h-full mix-blend-lighten" />
+          <div ref={mapContainerRef} className="w-full h-full mix-blend-lighten rounded-2xl" />
 
           {/* ERGONOMIC SLIDING BOTTOM DRAW PANEL */}
           <div className={`absolute bottom-0 left-0 right-0 bg-slate-950/95 border-t border-slate-800/80 px-4 pt-2 pb-4 z-[500] backdrop-blur-md transition-transform duration-300 transform-gpu will-change-transform shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.7)] ${
@@ -316,37 +300,14 @@ export const UserMobileView = () => {
             ) : <div />}
           </div>
 
-          {/* Floating UI HUD Mobile Control Clusters */}
+          {/* Floating Action HUD Controls */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-[400]">
-            
-            {/* Ambient Mode Badge Indicator */}
-            {isFullscreen && (
-              <div className="absolute top-4 left-4 bg-slate-950/90 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-200 backdrop-blur-md flex items-center gap-2 shadow-xl animate-fade-in pointer-events-auto">
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="text-[10px] font-mono tracking-wider font-bold uppercase">Tactical Radar Mode</span>
-              </div>
-            )}
-
             <div className="absolute bottom-3 left-3 bg-slate-950/80 border border-slate-800/50 px-2.5 py-1 rounded-md text-[9px] text-slate-400 font-mono flex items-center gap-1.5 backdrop-blur-sm">
               <Move className="h-3 w-3 text-cyan-400" />
               <span>Tap radar vectors to view</span>
             </div>
 
-            {/* Floating Action Cluster Control Hub */}
             <div className="absolute top-3 right-3 flex flex-col gap-2 pointer-events-auto">
-              {/* Fullscreen Canvas Switcher */}
-              <button 
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className="bg-slate-950/90 border border-slate-800/80 active:bg-slate-900 hover:border-cyan-500/40 p-2.5 rounded-xl text-slate-300 shadow-lg backdrop-blur-sm cursor-pointer transition-all"
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Map"}
-              >
-                {isFullscreen ? <Minimize2 className="h-4 w-4 text-amber-400" /> : <Maximize2 className="h-4 w-4" />}
-              </button>
-
-              {/* Recenter Telemetry Matrix Button */}
               <button 
                 onClick={reCenterOnUser}
                 className="bg-slate-950/90 border border-slate-800/80 active:bg-slate-900 hover:border-cyan-500/40 p-2.5 rounded-xl text-emerald-400 shadow-lg backdrop-blur-sm cursor-pointer transition-all"
@@ -357,11 +318,9 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* Threat Sector Micro Scroll Logs - Collapsed during Fullscreen Map Focus */}
+        {/* Threat Sector Micro Scroll Logs */}
         {state.redZones && state.redZones.length > 0 && (
-          <div className={`bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl max-h-24 overflow-y-auto scrollbar-none transition-all duration-300 origin-bottom ${
-            isFullscreen ? 'h-0 p-0 m-0 border-none opacity-0 scale-y-0' : 'h-auto opacity-100 mb-3'
-          }`}>
+          <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl max-h-24 overflow-y-auto scrollbar-none transition-all duration-300 origin-bottom h-auto opacity-100 mb-3">
             <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-900">
               <AlertTriangle className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
               <h5 className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
@@ -402,10 +361,8 @@ export const UserMobileView = () => {
           </div>
         )}
 
-        {/* Thumb-Optimized Automation Controls - Collapsed during Fullscreen Map Focus */}
-        <div className={`space-y-2 transition-all duration-300 origin-bottom ${
-          isFullscreen ? 'h-0 opacity-0 overflow-hidden m-0 scale-y-0' : 'h-auto mt-auto'
-        }`}>
+        {/* Thumb-Optimized Automation Controls */}
+        <div className="space-y-2 transition-all duration-300 origin-bottom h-auto mt-auto">
           <button
             onClick={simulateSnatch}
             disabled={isSOSActive}
@@ -435,10 +392,8 @@ export const UserMobileView = () => {
         </div>
       </div>
 
-      {/* Persistent Status Bar Footnote - Persistent or Hidden on Fullscreen */}
-      <div className={`pt-3 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500 transition-all duration-300 ${
-        isFullscreen ? 'h-0 py-0 opacity-0 border-transparent overflow-hidden' : 'h-auto mt-4'
-      }`}>
+      {/* Persistent Status Bar Footnote */}
+      <div className="pt-3 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500 transition-all duration-300 h-auto mt-4">
         <div className="flex items-center gap-2">
           <Activity className={`h-3.5 w-3.5 ${recording ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
           <span>{recording ? "Shadow Evidence Feed Open..." : "Ecosystem Shield Online"}</span>
