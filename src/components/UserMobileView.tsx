@@ -15,7 +15,7 @@ interface ThreatZone {
 }
 
 export const UserMobileView = () => {
-  const { state, triggerSOS, resetSOS, addEvidence, updateLocation } = useAppState();
+  const { state, triggerSOS, resetSOS, addEvidence, updateLocation, updateLuminaScore } = useAppState();
   const [voiceActive, setVoiceActive] = useState(true);
   const [recording, setRecording] = useState(false);
   const [blackoutActive, setBlackoutActive] = useState(false);
@@ -27,6 +27,15 @@ export const UserMobileView = () => {
   });
   const [isTracking, setIsTracking] = useState<boolean>(false);
 
+  const [simulationActive, setSimulationActive] = useState(false);
+  const [simulationLog, setSimulationLog] = useState<string | null>(null);
+  
+  const simulationActiveRef = useRef(simulationActive);
+
+  useEffect(() => {
+    simulationActiveRef.current = simulationActive;
+  }, [simulationActive]);
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -34,9 +43,7 @@ export const UserMobileView = () => {
 
   useSpeechListener(voiceActive);
 
-  // =========================================================================
-  // HOOK 1: MAP INITIALIZATION
-  // =========================================================================
+  // Map Initialization
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -63,9 +70,7 @@ export const UserMobileView = () => {
     };
   }, []);
 
-  // =========================================================================
-  // HOOK 2: TELEMETRY MARKER SYNCHRONIZATION
-  // =========================================================================
+  // Telemetry Marker & Map Sync Integration
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -89,9 +94,7 @@ export const UserMobileView = () => {
     }
   }, [liveCoords.lat, liveCoords.lng]);
 
-  // =========================================================================
-  // HOOK 3: GEOFENCED VECTOR BOUNDARIES LAYER
-  // =========================================================================
+  // Geofenced Vector Boundaries Layer
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
@@ -150,6 +153,7 @@ export const UserMobileView = () => {
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        if (simulationActiveRef.current) return;
         const currentLat = position.coords.latitude;
         const currentLng = position.coords.longitude;
         setLiveCoords({ lat: currentLat, lng: currentLng });
@@ -166,6 +170,60 @@ export const UserMobileView = () => {
     if (mapRef.current) {
       mapRef.current.setView([liveCoords.lat, liveCoords.lng], 15, { animate: true });
     }
+  };
+
+  const simulateNightWalk = () => {
+    if (simulationActiveRef.current) return;
+    
+    if (state.safetyTimer !== null) {
+      resetSOS();
+    }
+    
+    setSimulationActive(true);
+    updateLuminaScore(98);
+    
+    const path = [
+      { name: "Safe Command Center (Base)", lat: 26.8467, lng: 80.9462, score: 98, log: "Initializing night walk path. System reporting 98% safe status." },
+      { name: "Hazratganj Outer Ring Link", lat: 26.8485, lng: 80.9472, score: 90, log: "Moving down Hazratganj Outer Ring. Low density warning activated." },
+      { name: "High-density Corridor Accessway", lat: 26.8502, lng: 80.9481, score: 72, log: "Traversing Corridor Accessway. Proximity alert: Red zone 180m away." },
+      { name: "Hazratganj Dark Alley Intersection", lat: 26.8512, lng: 80.9485, score: 55, log: "Entering high risk bottleneck. Safety score dropping. Preparing stealth recorder..." },
+      { name: "Deep Inside Hazratganj (Red Zone)", lat: 26.8520, lng: 80.9490, score: 28, log: "Danger! Red Zone threshold violated. Automatically triggering Grab-Sense™ SOS broadcast!" }
+    ];
+
+    let currentStep = 0;
+    
+    const runStep = () => {
+      if (currentStep >= path.length) {
+        setSimulationActive(false);
+        setSimulationLog(null);
+        return;
+      }
+      
+      const point = path[currentStep];
+      setSimulationLog(point.log);
+      
+      setLiveCoords({ lat: point.lat, lng: point.lng });
+      updateLocation(point.lat, point.lng);
+      updateLuminaScore(point.score);
+      
+      if (mapRef.current) {
+        mapRef.current.setView([point.lat, point.lng], 15, { animate: true });
+      }
+      
+      if (currentStep === path.length - 1) {
+        setTimeout(() => {
+          simulateSnatch();
+          setSimulationActive(false);
+          setSimulationLog(null);
+        }, 1500);
+        return;
+      }
+      
+      currentStep++;
+      setTimeout(runStep, 2500);
+    };
+
+    runStep();
   };
 
   const simulateSnatch = () => {
@@ -220,8 +278,6 @@ export const UserMobileView = () => {
       )}
 
       <div className="flex flex-col h-full flex-grow">
-        
-        {/* Dynamic Mobile Header */}
         <div className="h-auto opacity-100 mb-3">
           <div className="flex items-center justify-between px-1">
             <div>
@@ -239,7 +295,6 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* System Telemetry Core Grid */}
         <div className="grid grid-cols-3 gap-2 h-auto opacity-100 mb-3">
           <div className="bg-slate-900/40 border border-slate-900 p-2 rounded-xl text-center backdrop-blur-sm">
             <span className="text-[9px] text-slate-500 block font-medium uppercase tracking-wider">Latency</span>
@@ -257,14 +312,18 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* INTERACTIVE VIEWPORT CANVAS */}
         <div className={`transition-all duration-300 rounded-2xl border bg-slate-950 transform-gpu will-change-transform z-10 relative h-[410px] w-full mb-4 ${
           isSOSActive ? 'border-red-600/60 shadow-lg shadow-red-950/20' : 'border-slate-800'
         }`}>
-          
           <div ref={mapContainerRef} className="w-full h-full mix-blend-lighten rounded-2xl" />
 
-          {/* ERGONOMIC SLIDING BOTTOM DRAW PANEL */}
+          {simulationActive && simulationLog && (
+            <div className="absolute top-3 left-3 right-14 bg-slate-950/95 border border-cyan-500/40 p-2.5 rounded-xl text-[10px] font-mono text-cyan-400 z-[410] shadow-lg shadow-cyan-950/20 backdrop-blur-md animate-pulse">
+              <span className="text-slate-500 block text-[8px] uppercase tracking-wider mb-0.5">AURA Walk Sentinel Daemon</span>
+              {simulationLog}
+            </div>
+          )}
+
           <div className={`absolute bottom-0 left-0 right-0 bg-slate-950/95 border-t border-slate-800/80 px-4 pt-2 pb-4 z-[500] backdrop-blur-md transition-transform duration-300 transform-gpu will-change-transform shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.7)] ${
             selectedZone ? 'translate-y-0' : 'translate-y-full'
           }`}>
@@ -291,22 +350,15 @@ export const UserMobileView = () => {
                     <span className="text-[9px] text-slate-400 block truncate">{selectedZone.lat.toFixed(3)}N, {selectedZone.lng.toFixed(3)}E</span>
                   </div>
                 </div>
-                <div className="bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800 text-[9px] text-slate-400 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5"><Crosshair className="h-3 w-3 text-cyan-400" /> Node Synced</div>
-                  <div className="flex items-center gap-1.5"><Users className="h-3 w-3 text-indigo-400" /> 14 Mesh Peers</div>
-                  <div className="flex items-center gap-1.5"><HardDrive className="h-3 w-3 text-emerald-400" /> Secure Link</div>
-                </div>
               </div>
             ) : <div />}
           </div>
 
-          {/* Floating Action HUD Controls */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-[400]">
             <div className="absolute bottom-3 left-3 bg-slate-950/80 border border-slate-800/50 px-2.5 py-1 rounded-md text-[9px] text-slate-400 font-mono flex items-center gap-1.5 backdrop-blur-sm">
               <Move className="h-3 w-3 text-cyan-400" />
               <span>Tap radar vectors to view</span>
             </div>
-
             <div className="absolute top-3 right-3 flex flex-col gap-2 pointer-events-auto">
               <button 
                 onClick={reCenterOnUser}
@@ -318,16 +370,14 @@ export const UserMobileView = () => {
           </div>
         </div>
 
-        {/* Threat Sector Micro Scroll Logs */}
         {state.redZones && state.redZones.length > 0 && (
-          <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl max-h-24 overflow-y-auto scrollbar-none transition-all duration-300 origin-bottom h-auto opacity-100 mb-3">
+          <div className="bg-slate-900/40 border border-slate-900 p-2.5 rounded-xl max-h-24 overflow-y-auto scrollbar-none h-auto opacity-100 mb-3">
             <div className="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-900">
               <AlertTriangle className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
               <h5 className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
                 AURA Mesh Feed • {state.redZones.length} Active Nodes
               </h5>
             </div>
-            
             <div className="space-y-1">
               {state.redZones.map((rawZone: any, index: number) => {
                 const zone: ThreatZone = {
@@ -338,7 +388,6 @@ export const UserMobileView = () => {
                   radius: rawZone.radius || 300,
                   riskLevel: rawZone.riskLevel || 'Medium'
                 };
-
                 return (
                   <div 
                     key={zone.id} 
@@ -346,7 +395,7 @@ export const UserMobileView = () => {
                       setSelectedZone(zone);
                       if (mapRef.current) mapRef.current.setView([zone.lat - 0.002, zone.lng], 15, { animate: true });
                     }}
-                    className={`flex items-center justify-between p-1.5 rounded-lg border transition-all ${
+                    className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer ${
                       selectedZone?.id === zone.id ? 'bg-slate-900/90 border-cyan-500/50' : 'bg-slate-950/40 border-transparent hover:border-slate-900'
                     }`}
                   >
@@ -361,8 +410,20 @@ export const UserMobileView = () => {
           </div>
         )}
 
-        {/* Thumb-Optimized Automation Controls */}
-        <div className="space-y-2 transition-all duration-300 origin-bottom h-auto mt-auto">
+        <div className="space-y-2 h-auto mt-auto">
+          <button
+            onClick={simulateNightWalk}
+            disabled={isSOSActive || simulationActive}
+            className={`w-full text-slate-950 py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] shadow-lg ${
+              isSOSActive || simulationActive
+                ? 'bg-slate-900/20 border border-slate-800 text-slate-600 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-cyan-400 to-indigo-400 hover:from-cyan-300 hover:to-indigo-300 shadow-cyan-950/30'
+            }`}
+          >
+            <Navigation className={`h-4 w-4 fill-slate-950 ${simulationActive ? 'animate-pulse' : ''}`} />
+            {simulationActive ? 'AURA Walking Sim Active...' : 'Simulate AURA Night Walk'}
+          </button>
+
           <button
             onClick={simulateSnatch}
             disabled={isSOSActive}
@@ -392,8 +453,7 @@ export const UserMobileView = () => {
         </div>
       </div>
 
-      {/* Persistent Status Bar Footnote */}
-      <div className="pt-3 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500 transition-all duration-300 h-auto mt-4">
+      <div className="pt-3 border-t border-slate-900 flex items-center justify-between text-[10px] text-slate-500 h-auto mt-4">
         <div className="flex items-center gap-2">
           <Activity className={`h-3.5 w-3.5 ${recording ? 'text-red-500 animate-pulse' : 'text-slate-600'}`} />
           <span>{recording ? "Shadow Evidence Feed Open..." : "Ecosystem Shield Online"}</span>

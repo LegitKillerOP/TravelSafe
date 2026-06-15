@@ -17,22 +17,23 @@ export type AppState = {
   safetyTimer: number | null; 
   safetyDuration: string;
   userLocation: { lat: number; lng: number };
-  redZones: Array<{ lat: number; lng: number; radius: number }>;
+  redZones: Array<{ id?: string; name?: string; lat: number; lng: number; radius: number; riskLevel?: 'High' | 'Medium' | 'Low' }>;
   latestHash: string | null;
   evidenceLogs: Array<{ id: string; timestamp: string; location: string; hash: string }>;
 };
 
 export type AppContextType = {
   state: AppState;
-  localMutedIncident: boolean; // Tracks if an active distress incident is locally minimized/hidden
+  localMutedIncident: boolean; 
   login: (profile: Omit<UserProfile, 'uid'>) => void;
   logout: () => void;
   triggerSOS: () => void;
   resetSOS: () => void;
-  interceptSOS: (targetUid?: string) => void; // Dispatches response vector on local machine
-  clearSOSIncident: (targetUid?: string) => void; // Clears the notification frame locally for the operator
+  interceptSOS: (targetUid?: string) => void; 
+  clearSOSIncident: (targetUid?: string) => void; 
   addEvidence: (hash: string, locationStr: string) => void;
   updateLocation: (lat: number, lng: number) => void;
+  updateLuminaScore: (score: number) => void;
 };
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef} from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import PubNub from 'pubnub';
 import { AppContext } from './Context';
 import type { AppState, UserProfile } from './Context';
 
-const DEFAULT_RED_ZONES = [
+const DEFAULT_RED_ZONES: AppState['redZones'] = [
   { id: 'zone-1', name: 'Hazratganj Central Corridor', lat: 26.8520, lng: 80.9490, radius: 180, riskLevel: 'Medium' },
   { id: 'zone-2', name: 'Charbagh Station Transit Hub', lat: 26.8312, lng: 80.9205, radius: 350, riskLevel: 'High' },
   { id: 'zone-3', name: 'Aminabad Market Bottleneck', lat: 26.8410, lng: 80.9350, radius: 240, riskLevel: 'High' },
@@ -60,10 +60,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return defaultInitialState;
   });
 
-  // Local-only state tracking for response nodes to override active UI visibility without altering PubNub feeds
   const [localMutedIncident, setLocalMutedIncident] = useState(false);
-
   const stateRef = useRef(state);
+
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -74,17 +73,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       message: (envelope: any) => {
         const { eventName, payload } = envelope.message;
         
-        // Prevent reacting to your own broadcast events if you already updated state locally
         if (envelope.publisher === pubnubClient.getUserId()) return;
 
         if (eventName === 'SOS_BROADCAST_START') {
-          setLocalMutedIncident(false); // Reset mute flag whenever a fresh network breach/incident occurs
+          setLocalMutedIncident(false);
           setState((prev) => ({
             ...prev,
             safetyTimer: 1000,
             safetyDuration: '00:00:01',
             meshStatus: 'Scanning',
-            // Snap map coordinates for Guardians/Officers directly to the incoming target vector
             userLocation: prev.currentUser?.role !== 'user' ? payload.location : prev.userLocation
           }));
         }
@@ -100,6 +97,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }));
         }
 
+        if (eventName === 'TELEMETRY_WALK_UPDATE') {
+          setState((prev) => ({
+            ...prev,
+            userLocation: payload.location,
+            luminaScore: payload.score
+          }));
+        }
+
         if (eventName === 'EVIDENCE_DISPATCH') {
           setState((prev) => ({
             ...prev,
@@ -110,7 +115,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Bind listener and subscribe to the open mesh channel
     pubnubClient.addListener(pubnubListener);
     pubnubClient.subscribe({ channels: [MESH_CHANNEL_NAME] });
 
@@ -161,7 +165,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setState({ ...defaultInitialState, isAuthenticated: false, currentUser: null });
   };
 
-  // Direct client-side cloud publisher broadcast system
   const sendNetworkMeshEvent = (eventName: string, payload: any) => {
     try {
       pubnubClient.publish({
@@ -185,7 +188,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     sendNetworkMeshEvent('SOS_BROADCAST_CLEAR', {});
   };
 
-  // Operational Node Actions (Mutes locally on current supervisor console layout only)
   const interceptSOS = (targetUid?: string) => {
     console.log(`[Mesh Event] Local node intercepting routing target frame: ${targetUid}`);
   };
@@ -208,6 +210,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateLocation = (lat: number, lng: number) => {
     setState((prev) => ({ ...prev, userLocation: { lat, lng } }));
+    sendNetworkMeshEvent('TELEMETRY_WALK_UPDATE', { location: { lat, lng }, score: stateRef.current.luminaScore });
+  };
+
+  const updateLuminaScore = (score: number) => {
+    setState((prev) => ({ ...prev, luminaScore: score }));
+    sendNetworkMeshEvent('TELEMETRY_WALK_UPDATE', { location: stateRef.current.userLocation, score });
   };
 
   return (
@@ -222,7 +230,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         interceptSOS, 
         clearSOSIncident, 
         addEvidence, 
-        updateLocation 
+        updateLocation,
+        updateLuminaScore
       }}
     >
       {children}
